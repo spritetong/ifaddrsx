@@ -16,7 +16,7 @@ mac = ["nix"]
 [dependencies]
 ipnetwork = "0.18.0"
 get_if_addrs = "0.5.3"
-libc = "0.2.119"
+libc = "0.2.122"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3.9", features = ["minwindef", "winerror", "ifdef", "ws2def", "ws2ipdef"] }
