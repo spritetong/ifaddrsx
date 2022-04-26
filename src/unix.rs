@@ -3,19 +3,25 @@ use ipnetwork::IpNetwork;
 use std::net::IpAddr;
 
 #[cfg(feature = "mac")]
-use nix::{ifaddrs::*, sys::socket::SockAddr};
+use nix::{
+    ifaddrs::*,
+    sys::socket::{LinkAddr, SockaddrLike},
+};
 
 use crate::Interface;
 
 /// Get all network interfaces.
 pub fn get_interfaces() -> std::io::Result<Vec<Interface>> {
-    
     #[cfg(feature = "mac")]
     let mut mac_map = std::collections::BTreeMap::<String, [u8; 6]>::new();
     #[cfg(feature = "mac")]
     for interface in getifaddrs()? {
-        if let Some(SockAddr::Link(link)) = interface.address {
-            mac_map.insert(interface.interface_name.clone(), link.addr());
+        if let Some(addr) = interface.address {
+            if let Some(link) = unsafe { LinkAddr::from_raw(addr.as_ptr(), None) } {
+                if let Some(mac) = link.addr() {
+                    mac_map.insert(interface.interface_name.clone(), mac);
+                }
+            }
         }
     }
 
