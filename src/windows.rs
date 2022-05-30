@@ -1,21 +1,19 @@
-mod winapi_shared_ifdef;
-mod winapi_um_iptypes;
-
 use ipnetwork::IpNetwork;
 use libc::c_char;
-#[cfg(feature = "friendly")]
-use libc::wchar_t;
 use std::ffi::CStr;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
+use winapi::shared::ifdef::IfOperStatusUp;
 use winapi::shared::ntdef::{PVOID, ULONG};
 use winapi::shared::winerror::*;
 use winapi::shared::ws2def::{AF_INET, AF_INET6, SOCKADDR_IN};
-use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH; // TODO replace with upstream winapi once released.
+use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH;
+use winapi::um::iptypes::*;
+
+#[cfg(feature = "friendly")]
+use libc::wchar_t;
 
 use crate::Interface;
-use winapi_shared_ifdef::IfOperStatusUp;
-use winapi_um_iptypes::*; // TODO replace with upstream winapi once released.
 
 #[link(name = "IPHLPAPI")]
 extern "C" {
