@@ -19,7 +19,6 @@ pub struct Interface {
     /// The network IP address of the interface.
     pub ip: IpNetwork,
     /// The MAC address.
-    #[cfg(feature = "mac")]
     pub mac_addr: [u8; 6],
 }
 

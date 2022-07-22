@@ -1,6 +1,6 @@
 [package]
 name = "ifaddrsx"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 
 [lib]
@@ -10,16 +10,14 @@ path = "src/lib.rs"
 [features]
 default = []
 friendly = []
-mac = ["nix"]
-full = ["friendly", "mac"]
+full = ["friendly"]
 
 [dependencies]
 ipnetwork = "^0.20"
-get_if_addrs = "^0.5"
 libc = "^0.2"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "^0.3", features = ["ifdef", "iptypes", "winerror", "ws2def", "ws2ipdef"] }
 
-[target.'cfg(any(target_os = "linux", target_os = "macos", target_os = "freebsd"))'.dependencies]
-nix = { version = "^0.24", optional = true }
+[target.'cfg(unix)'.dependencies]
+nix = { version = "^0.24" }

@@ -1,69 +1,134 @@
-use get_if_addrs::{get_if_addrs, IfAddr};
 use ipnetwork::IpNetwork;
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
-#[cfg(feature = "mac")]
 use nix::{
     ifaddrs::*,
-    sys::socket::{LinkAddr, SockaddrLike},
+    sys::socket::{LinkAddr, SockaddrIn, SockaddrIn6, SockaddrLike},
 };
 
 use crate::Interface;
 
 /// Get all network interfaces.
 pub fn get_interfaces() -> std::io::Result<Vec<Interface>> {
-    #[cfg(feature = "mac")]
     let mut mac_map = std::collections::BTreeMap::<String, [u8; 6]>::new();
-    #[cfg(feature = "mac")]
-    for interface in getifaddrs()? {
-        if let Some(addr) = interface.address {
+    let mut interfaces = vec![];
+
+    for nif in getifaddrs()? {
+        let InterfaceAddress {
+            interface_name: nif_name,
+            address: nif_address,
+            netmask: nif_netmask,
+            ..
+        } = nif;
+
+        if let Some(addr) = nif_address {
             if let Some(link) = unsafe { LinkAddr::from_raw(addr.as_ptr(), None) } {
                 if let Some(mac) = link.addr() {
-                    mac_map.insert(interface.interface_name.clone(), mac);
+                    mac_map.insert(nif_name, mac);
                 }
+                continue;
+            }
+
+            if let Some(addr) = unsafe { SockaddrIn::from_raw(addr.as_ptr(), None) } {
+                let netmask = match nif_netmask
+                    .and_then(|x| unsafe { SockaddrIn::from_raw(x.as_ptr(), None) })
+                {
+                    Some(v) => v.ip().into(),
+                    _ => Ipv4Addr::BROADCAST,
+                };
+                if let Ok(ip) =
+                    IpNetwork::with_netmask(IpAddr::V4(addr.ip().into()), IpAddr::V4(netmask))
+                {
+                    interfaces.push(Interface {
+                        #[cfg(feature = "friendly")]
+                        friendly_name: nif_name.clone(),
+                        name: nif_name,
+                        ip,
+                        mac_addr: [0u8; 6],
+                    });
+                }
+                continue;
+            }
+
+            if let Some(addr) = unsafe { SockaddrIn6::from_raw(addr.as_ptr(), None) } {
+                let netmask = match nif_netmask
+                    .and_then(|x| unsafe { SockaddrIn6::from_raw(x.as_ptr(), None) })
+                {
+                    Some(v) => v.ip().into(),
+                    _ => Ipv6Addr::new(
+                        0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
+                    ),
+                };
+                if let Ok(ip) =
+                    IpNetwork::with_netmask(IpAddr::V6(addr.ip().into()), IpAddr::V6(netmask))
+                {
+                    interfaces.push(Interface {
+                        #[cfg(feature = "friendly")]
+                        friendly_name: nif_name.clone(),
+                        name: nif_name,
+                        ip,
+                        mac_addr: [0u8; 6],
+                    });
+                }
+                continue;
             }
         }
     }
 
-    let mut rst = vec![];
-    for nif in get_if_addrs()? {
-        let addr = match &nif.addr {
-            IfAddr::V4(v) => IpNetwork::with_netmask(IpAddr::V4(v.ip), IpAddr::V4(v.netmask)),
-            IfAddr::V6(v) => IpNetwork::with_netmask(IpAddr::V6(v.ip), IpAddr::V6(v.netmask)),
-        };
-        if let Ok(ip) = addr {
-            #[cfg(feature = "mac")]
-            let mac_addr = match mac_map.get(&nif.name) {
-                Some(v) => *v,
-                _ => [0u8; 6],
-            };
-
-            rst.push(Interface {
-                name: nif.name.clone(),
-                #[cfg(feature = "friendly")]
-                friendly_name: nif.name.clone(),
-                ip,
-                #[cfg(feature = "mac")]
-                mac_addr,
-            });
+    for interface in interfaces.iter_mut() {
+        if let Some(mac) = mac_map.get(&interface.name) {
+            interface.mac_addr = *mac;
         }
     }
 
-    Ok(rst)
+    Ok(interfaces)
 }
 
 /// Get all network interfaces' IP addresses.
 pub fn get_ifaddrs() -> std::io::Result<Vec<IpNetwork>> {
-    let mut rst = vec![];
-    for nif in get_if_addrs()? {
-        let addr = match &nif.addr {
-            IfAddr::V4(v) => IpNetwork::with_netmask(IpAddr::V4(v.ip), IpAddr::V4(v.netmask)),
-            IfAddr::V6(v) => IpNetwork::with_netmask(IpAddr::V6(v.ip), IpAddr::V6(v.netmask)),
-        };
-        if let Ok(ip) = addr {
-            rst.push(ip);
+    let mut addrs = vec![];
+
+    for nif in getifaddrs()? {
+        let InterfaceAddress {
+            address: nif_address,
+            netmask: nif_netmask,
+            ..
+        } = nif;
+
+        if let Some(addr) = nif_address {
+            if let Some(addr) = unsafe { SockaddrIn::from_raw(addr.as_ptr(), None) } {
+                let netmask = match nif_netmask
+                    .and_then(|x| unsafe { SockaddrIn::from_raw(x.as_ptr(), None) })
+                {
+                    Some(v) => v.ip().into(),
+                    _ => Ipv4Addr::BROADCAST,
+                };
+                if let Ok(ip) =
+                    IpNetwork::with_netmask(IpAddr::V4(addr.ip().into()), IpAddr::V4(netmask))
+                {
+                    addrs.push(ip);
+                }
+                continue;
+            }
+
+            if let Some(addr) = unsafe { SockaddrIn6::from_raw(addr.as_ptr(), None) } {
+                let netmask = match nif_netmask
+                    .and_then(|x| unsafe { SockaddrIn6::from_raw(x.as_ptr(), None) })
+                {
+                    Some(v) => v.ip().into(),
+                    _ => Ipv6Addr::new(
+                        0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
+                    ),
+                };
+                if let Ok(ip) =
+                    IpNetwork::with_netmask(IpAddr::V6(addr.ip().into()), IpAddr::V6(netmask))
+                {
+                    addrs.push(ip);
+                }
+                continue;
+            }
         }
     }
 
-    Ok(rst)
+    Ok(addrs)
 }

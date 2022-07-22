@@ -81,7 +81,6 @@ pub fn get_interfaces() -> std::io::Result<Vec<Interface>> {
                                     #[cfg(feature = "friendly")]
                                     friendly_name: wcs_to_string(a.FriendlyName),
                                     ip,
-                                    #[cfg(feature = "mac")]
                                     mac_addr: a.PhysicalAddress[..6].try_into().unwrap(),
                                 });
                             }
@@ -95,7 +94,6 @@ pub fn get_interfaces() -> std::io::Result<Vec<Interface>> {
                                     #[cfg(feature = "friendly")]
                                     friendly_name: wcs_to_string(a.FriendlyName),
                                     ip,
-                                    #[cfg(feature = "mac")]
                                     mac_addr: a.PhysicalAddress[..6].try_into().unwrap(),
                                 });
                             }
