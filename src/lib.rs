@@ -16,6 +16,8 @@ pub struct Interface {
     /// The friendly name.
     #[cfg(feature = "friendly")]
     pub friendly_name: String,
+    /// The interface index.
+    pub index: usize,
     /// The network IP address of the interface.
     pub ip: IpNetwork,
     /// The MAC address.

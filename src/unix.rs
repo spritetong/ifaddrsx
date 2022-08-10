@@ -10,7 +10,7 @@ use crate::Interface;
 
 /// Get all network interfaces.
 pub fn get_interfaces() -> std::io::Result<Vec<Interface>> {
-    let mut mac_map = std::collections::BTreeMap::<String, [u8; 6]>::new();
+    let mut if_map = std::collections::BTreeMap::<String, (usize, [u8; 6])>::new();
     let mut interfaces = vec![];
 
     for nif in getifaddrs()? {
@@ -23,8 +23,15 @@ pub fn get_interfaces() -> std::io::Result<Vec<Interface>> {
 
         if let Some(addr) = nif_address {
             if let Some(link) = unsafe { LinkAddr::from_raw(addr.as_ptr(), None) } {
-                if let Some(mac) = link.addr() {
-                    mac_map.insert(nif_name, mac);
+                match link.addr() {
+                    Some(mac) => {
+                        if_map.insert(nif_name, (link.ifindex(), mac));
+                    }
+                    _ => {
+                        if !if_map.contains_key(&nif_name) {
+                            if_map.insert(nif_name, (link.ifindex(), [0u8; 6]));
+                        }
+                    }
                 }
                 continue;
             }
@@ -43,6 +50,7 @@ pub fn get_interfaces() -> std::io::Result<Vec<Interface>> {
                         #[cfg(feature = "friendly")]
                         friendly_name: nif_name.clone(),
                         name: nif_name,
+                        index: 0,
                         ip,
                         mac_addr: [0u8; 6],
                     });
@@ -66,6 +74,7 @@ pub fn get_interfaces() -> std::io::Result<Vec<Interface>> {
                         #[cfg(feature = "friendly")]
                         friendly_name: nif_name.clone(),
                         name: nif_name,
+                        index: 0,
                         ip,
                         mac_addr: [0u8; 6],
                     });
@@ -76,8 +85,9 @@ pub fn get_interfaces() -> std::io::Result<Vec<Interface>> {
     }
 
     for interface in interfaces.iter_mut() {
-        if let Some(mac) = mac_map.get(&interface.name) {
-            interface.mac_addr = *mac;
+        if let Some(&(index, mac)) = if_map.get(&interface.name) {
+            interface.index = index;
+            interface.mac_addr = mac;
         }
     }
 

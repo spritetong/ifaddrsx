@@ -80,6 +80,7 @@ pub fn get_interfaces() -> std::io::Result<Vec<Interface>> {
                                     name: cstr_to_string(a.AdapterName),
                                     #[cfg(feature = "friendly")]
                                     friendly_name: wcs_to_string(a.FriendlyName),
+                                    index: a.u.s().IfIndex as usize,
                                     ip,
                                     mac_addr: a.PhysicalAddress[..6].try_into().unwrap(),
                                 });
@@ -93,6 +94,7 @@ pub fn get_interfaces() -> std::io::Result<Vec<Interface>> {
                                     name: cstr_to_string(a.AdapterName),
                                     #[cfg(feature = "friendly")]
                                     friendly_name: wcs_to_string(a.FriendlyName),
+                                    index: a.u.s().IfIndex as usize,
                                     ip,
                                     mac_addr: a.PhysicalAddress[..6].try_into().unwrap(),
                                 });
