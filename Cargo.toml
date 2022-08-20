@@ -1,6 +1,6 @@
 [package]
 name = "ifaddrsx"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 
 [lib]
@@ -13,11 +13,11 @@ friendly = []
 full = ["friendly"]
 
 [dependencies]
-ipnetwork = "^0.20"
-libc = "^0.2"
+ipnetwork = "0.20"
+libc = "0.2"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "^0.3", features = ["ifdef", "iptypes", "winerror", "ws2def", "ws2ipdef"] }
+winapi = { version = "0.3", features = ["ifdef", "iptypes", "winerror", "ws2def", "ws2ipdef"] }
 
 [target.'cfg(unix)'.dependencies]
-nix = { version = "^0.24", default-features = false, features = ["net"] }
+nix = { version = "0.24", default-features = false, features = ["net"] }
