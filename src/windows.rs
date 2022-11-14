@@ -8,23 +8,13 @@ use winapi::shared::ntdef::{PVOID, ULONG};
 use winapi::shared::winerror::*;
 use winapi::shared::ws2def::{AF_INET, AF_INET6, SOCKADDR_IN};
 use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH;
+use winapi::um::iphlpapi::*;
 use winapi::um::iptypes::*;
 
 #[cfg(feature = "friendly")]
 use libc::wchar_t;
 
 use crate::Interface;
-
-#[link(name = "IPHLPAPI")]
-extern "C" {
-    fn GetAdaptersAddresses(
-        family: ULONG,
-        flags: ULONG,
-        reserved: PVOID,
-        buffer: *const u8,
-        size: *mut ULONG,
-    ) -> ULONG;
-}
 
 fn cstr_to_string(cstr: *const c_char) -> String {
     unsafe { CStr::from_ptr(cstr).to_string_lossy().into() }
