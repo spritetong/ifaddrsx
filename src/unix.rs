@@ -28,9 +28,9 @@ pub fn get_interfaces() -> std::io::Result<Vec<Interface>> {
                         if_map.insert(nif_name, (link.ifindex(), mac));
                     }
                     _ => {
-                        if !if_map.contains_key(&nif_name) {
-                            if_map.insert(nif_name, (link.ifindex(), [0u8; 6]));
-                        }
+                        if_map
+                            .entry(nif_name)
+                            .or_insert_with(|| (link.ifindex(), [0u8; 6]));
                     }
                 }
                 continue;
@@ -62,13 +62,12 @@ pub fn get_interfaces() -> std::io::Result<Vec<Interface>> {
                 let netmask = match nif_netmask
                     .and_then(|x| unsafe { SockaddrIn6::from_raw(x.as_ptr(), None) })
                 {
-                    Some(v) => v.ip().into(),
+                    Some(v) => v.ip(),
                     _ => Ipv6Addr::new(
                         0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
                     ),
                 };
-                if let Ok(ip) =
-                    IpNetwork::with_netmask(IpAddr::V6(addr.ip().into()), IpAddr::V6(netmask))
+                if let Ok(ip) = IpNetwork::with_netmask(IpAddr::V6(addr.ip()), IpAddr::V6(netmask))
                 {
                     interfaces.push(Interface {
                         #[cfg(feature = "friendly")]
@@ -125,13 +124,12 @@ pub fn get_ifaddrs() -> std::io::Result<Vec<IpNetwork>> {
                 let netmask = match nif_netmask
                     .and_then(|x| unsafe { SockaddrIn6::from_raw(x.as_ptr(), None) })
                 {
-                    Some(v) => v.ip().into(),
+                    Some(v) => v.ip(),
                     _ => Ipv6Addr::new(
                         0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
                     ),
                 };
-                if let Ok(ip) =
-                    IpNetwork::with_netmask(IpAddr::V6(addr.ip().into()), IpAddr::V6(netmask))
+                if let Ok(ip) = IpNetwork::with_netmask(IpAddr::V6(addr.ip()), IpAddr::V6(netmask))
                 {
                     addrs.push(ip);
                 }
