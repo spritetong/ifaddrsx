@@ -4,7 +4,7 @@ use std::ffi::CStr;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use winapi::shared::ifdef::IfOperStatusUp;
-use winapi::shared::ntdef::{PVOID, ULONG};
+use winapi::shared::ntdef::ULONG;
 use winapi::shared::winerror::*;
 use winapi::shared::ws2def::{AF_INET, AF_INET6, SOCKADDR_IN};
 use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH;
@@ -25,38 +25,48 @@ fn wcs_to_string(wstr: *const wchar_t) -> String {
     unsafe { String::from_utf16_lossy(std::slice::from_raw_parts(wstr, libc::wcslen(wstr))) }
 }
 
+fn get_adapter_addresses() -> std::io::Result<Vec<u8>> {
+    let mut size: ULONG = 1000;
+    let mut buffer = Vec::<u8>::with_capacity(size as usize);
+
+    for _ in 0..10 {
+        match unsafe {
+            GetAdaptersAddresses(
+                0,
+                0,
+                std::ptr::null_mut(),
+                buffer.as_ptr() as PIP_ADAPTER_ADDRESSES,
+                &mut size,
+            )
+        } {
+            ERROR_SUCCESS => return Ok(buffer),
+            ERROR_BUFFER_OVERFLOW if size > 0 => {
+                // Enlarge the buffer and try again.
+                buffer.reserve(size as usize);
+            }
+            _ => break,
+        }
+    }
+
+    Err(std::io::Error::new(
+        std::io::ErrorKind::Other,
+        "GetAdaptersAddresses failed",
+    ))
+}
+
 /// Get all network interfaces.
 pub fn get_interfaces() -> std::io::Result<Vec<Interface>> {
     unsafe {
-        let mut size: ULONG = 1024;
-        let mut buffer = Vec::with_capacity(size as usize);
-
-        let sizeptr: *mut ULONG = &mut size;
-        let mut res = GetAdaptersAddresses(0, 0, 0 as PVOID, buffer.as_mut_ptr(), sizeptr);
-
-        // Since we are providing the buffer, it might be too small. Check for overflow
-        // and try again with the required buffer size. There is a chance for a race
-        // condition here if an interface is added between the two calls - however
-        // looping potentially forever seems more dangerous.
-        if res == ERROR_BUFFER_OVERFLOW {
-            buffer.reserve(size as usize - buffer.len());
-            res = GetAdaptersAddresses(0, 0, 0 as PVOID, buffer.as_mut_ptr(), sizeptr);
-        }
-
-        if res != ERROR_SUCCESS {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "GetAdaptersAddresses failed",
-            ));
-        }
+        let buffer = get_adapter_addresses()?;
 
         let mut res = Vec::new();
-        let mut adapterptr = buffer.as_ptr() as PIP_ADAPTER_ADDRESSES;
-        while !adapterptr.is_null() {
-            let a = *adapterptr;
+        let mut adapter = buffer.as_ptr() as PIP_ADAPTER_ADDRESSES;
+        while !adapter.is_null() {
+            let a = &*adapter;
 
             if a.OperStatus == IfOperStatusUp {
                 let mut current = a.FirstUnicastAddress;
+
                 while !current.is_null() {
                     let addr = &*current;
                     match (*addr.Address.lpSockaddr).sa_family as i32 {
@@ -93,13 +103,11 @@ pub fn get_interfaces() -> std::io::Result<Vec<Interface>> {
                         _ => (),
                     }
 
-                    assert_ne!(current, addr.Next);
                     current = addr.Next;
                 }
             }
 
-            assert_ne!(adapterptr, a.Next);
-            adapterptr = a.Next;
+            adapter = a.Next;
         }
 
         Ok(res)
@@ -109,35 +117,16 @@ pub fn get_interfaces() -> std::io::Result<Vec<Interface>> {
 /// Get all network interfaces' IP addresses.
 pub fn get_ifaddrs() -> std::io::Result<Vec<IpNetwork>> {
     unsafe {
-        let mut size: ULONG = 1024;
-        let mut buffer = Vec::with_capacity(size as usize);
-
-        let sizeptr: *mut ULONG = &mut size;
-        let mut res = GetAdaptersAddresses(0, 0, 0 as PVOID, buffer.as_mut_ptr(), sizeptr);
-
-        // Since we are providing the buffer, it might be too small. Check for overflow
-        // and try again with the required buffer size. There is a chance for a race
-        // condition here if an interface is added between the two calls - however
-        // looping potentially forever seems more dangerous.
-        if res == ERROR_BUFFER_OVERFLOW {
-            buffer.reserve(size as usize - buffer.len());
-            res = GetAdaptersAddresses(0, 0, 0 as PVOID, buffer.as_mut_ptr(), sizeptr);
-        }
-
-        if res != ERROR_SUCCESS {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "GetAdaptersAddresses failed",
-            ));
-        }
+        let buffer = get_adapter_addresses()?;
 
         let mut res = Vec::new();
-        let mut adapterptr = buffer.as_ptr() as PIP_ADAPTER_ADDRESSES;
-        while !adapterptr.is_null() {
-            let a = *adapterptr;
+        let mut adapter = buffer.as_ptr() as PIP_ADAPTER_ADDRESSES;
+        while !adapter.is_null() {
+            let a = *adapter;
 
             if a.OperStatus == IfOperStatusUp {
                 let mut current = a.FirstUnicastAddress;
+
                 while !current.is_null() {
                     let addr = &*current;
                     match (*addr.Address.lpSockaddr).sa_family as i32 {
@@ -160,13 +149,11 @@ pub fn get_ifaddrs() -> std::io::Result<Vec<IpNetwork>> {
                         _ => (),
                     }
 
-                    assert_ne!(current, addr.Next);
                     current = addr.Next;
                 }
             }
 
-            assert_ne!(adapterptr, a.Next);
-            adapterptr = a.Next;
+            adapter = a.Next;
         }
 
         Ok(res)
