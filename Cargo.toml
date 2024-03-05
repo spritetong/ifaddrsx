@@ -20,4 +20,4 @@ libc = "0.2"
 winapi = { version = "0.3", features = ["ifdef", "iphlpapi", "iptypes", "winerror", "ws2def", "ws2ipdef"] }
 
 [target.'cfg(unix)'.dependencies]
-nix = { version = "0.27", default-features = false, features = ["net"] }
+nix = { version = "0.28", default-features = false, features = ["net"] }
