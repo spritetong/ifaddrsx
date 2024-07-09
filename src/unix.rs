@@ -65,7 +65,7 @@ pub fn get_interfaces(only_up: bool) -> std::io::Result<Vec<Interface>> {
                     ipv6_index: 0,
                     flags,
                     ips: Vec::new(),
-                    mac_addr: [0u8; 6],
+                    mac_addr: None,
                 });
                 interfaces.len() - 1
             }
@@ -95,7 +95,9 @@ pub fn get_interfaces(only_up: bool) -> std::io::Result<Vec<Interface>> {
             nif.index = link.ifindex();
             nif.ipv6_index = nif.index;
             if let Some(mac) = link.addr() {
-                nif.mac_addr = mac;
+                if !mac.iter().all(|&x| x == 0) {
+                    nif.mac_addr = Some(mac);
+                }
             }
             continue;
         } else if let Some(addr) = unsafe { SockaddrIn::from_raw(addr.as_ptr(), None) } {
@@ -131,7 +133,7 @@ pub fn get_interfaces(only_up: bool) -> std::io::Result<Vec<Interface>> {
     }
 
     interfaces.iter_mut().for_each(|nif| {
-        if nif.mac_addr.iter().all(|&x| x == 0) {
+        if nif.mac_addr.is_none() {
             nif.flags.remove(IfFlags::TAP);
         } else {
             nif.flags.remove(IfFlags::TUN);

@@ -12,7 +12,7 @@ use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH;
 use winapi::um::iphlpapi::*;
 use winapi::um::iptypes::*;
 
-use crate::{Interface, IfFlags};
+use crate::{IfFlags, Interface};
 
 fn cstr_to_string(cstr: *const c_char) -> String {
     unsafe { CStr::from_ptr(cstr).to_string_lossy().into() }
@@ -71,7 +71,13 @@ pub fn get_interfaces(only_up: bool) -> std::io::Result<Vec<Interface>> {
                     ipv6_index: a.Ipv6IfIndex as usize,
                     flags: IfFlags::empty(),
                     ips: Vec::new(),
-                    mac_addr: a.PhysicalAddress[..6].try_into().unwrap(),
+                    mac_addr: if a.PhysicalAddressLength >= 6
+                        && !a.PhysicalAddress[..6].iter().all(|&x| x == 0)
+                    {
+                        a.PhysicalAddress[..6].try_into().ok()
+                    } else {
+                        None
+                    },
                 };
 
                 if a.OperStatus == IfOperStatusUp {

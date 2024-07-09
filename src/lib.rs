@@ -48,7 +48,7 @@ pub struct Interface {
     /// The network IP address of the interface.
     pub ips: Vec<IpNetwork>,
     /// The MAC address.
-    pub mac_addr: [u8; 6],
+    pub mac_addr: Option<[u8; 6]>,
 }
 
 impl Interface {
