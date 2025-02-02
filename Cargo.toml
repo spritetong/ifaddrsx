@@ -1,5 +1,13 @@
 [package]
 name = "ifaddrsx"
+authors = ["Sprite Tong <spritetong@gmail.com>"]
+description = "Retrieve the names and IP addresses of all active network interfaces."
+repository = "https://github.com/spritetong/ifaddrsx"
+keywords = ["network", "interfaces", "ip", "networking", "sysinfo"]
+categories = ["network-programming", "os", "api-bindings"]
+documentation = "https://docs.rs/ifaddrsx"
+license = "MIT"
+readme = "README.md"
 version = "0.3.0"
 edition = "2021"
 
@@ -9,7 +17,7 @@ path = "src/lib.rs"
 
 [dependencies]
 bitflags = "2"
-ipnetwork = "0.20"
+ipnetwork = "0.21"
 libc = "0.2"
 
 [target.'cfg(windows)'.dependencies]
