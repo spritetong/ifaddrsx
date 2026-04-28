@@ -103,11 +103,11 @@ pub fn get_interfaces(only_up: bool) -> std::io::Result<Vec<Interface>> {
         } else if let Some(addr) = unsafe { SockaddrIn::from_raw(addr.as_ptr(), None) } {
             let netmask =
                 match nif_netmask.and_then(|x| unsafe { SockaddrIn::from_raw(x.as_ptr(), None) }) {
-                    Some(v) => v.ip().into(),
+                    Some(v) => v.ip(),
                     _ => Ipv4Addr::BROADCAST,
                 };
             if let Ok(ip) =
-                IpNetwork::with_netmask(IpAddr::V4(addr.ip().into()), IpAddr::V4(netmask))
+                IpNetwork::with_netmask(IpAddr::V4(addr.ip()), IpAddr::V4(netmask))
             {
                 let nif = get_if_mut(&mut interfaces, nif_name, nif_flags);
                 nif.ips.push(ip);
@@ -166,11 +166,11 @@ pub fn get_ifaddrs(only_up: bool) -> std::io::Result<Vec<IpNetwork>> {
                 let netmask = match nif_netmask
                     .and_then(|x| unsafe { SockaddrIn::from_raw(x.as_ptr(), None) })
                 {
-                    Some(v) => v.ip().into(),
+                    Some(v) => v.ip(),
                     _ => Ipv4Addr::BROADCAST,
                 };
                 if let Ok(ip) =
-                    IpNetwork::with_netmask(IpAddr::V4(addr.ip().into()), IpAddr::V4(netmask))
+                    IpNetwork::with_netmask(IpAddr::V4(addr.ip()), IpAddr::V4(netmask))
                 {
                     addrs.push(ip);
                 }

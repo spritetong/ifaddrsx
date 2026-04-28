@@ -45,10 +45,7 @@ fn get_adapter_addresses() -> std::io::Result<Vec<u8>> {
         }
     }
 
-    Err(std::io::Error::new(
-        std::io::ErrorKind::Other,
-        "GetAdaptersAddresses failed",
-    ))
+    Err(std::io::Error::other("GetAdaptersAddresses failed"))
 }
 
 /// Get all network interfaces.
